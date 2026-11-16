@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QC Station</title>
+<meta name="theme-color" content="#FACC15">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- STQV-LNC-001 · Rev A · 2026-11-16 · Thanongsak (with Claude) · home-screen launcher: opens the Apps Script /exec link (no frame, no data here) -->
+<style>
+  html, body { margin: 0; min-height: 100%; background: #FDE047; color: #1E293B; font-family: system-ui, "Prompt", sans-serif; }
+  main { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 24px; text-align: center; box-sizing: border-box; }
+  img { width: 150px; height: 150px; border-radius: 34px; box-shadow: 10px 10px 24px rgba(146,120,0,.35), -8px -8px 20px rgba(255,255,255,.7); }
+  h1 { margin: 0; font-size: 34px; }
+  .dev { font-size: 22px; font-weight: 800; background: #FEF9C3; padding: 6px 18px; border-radius: 14px; }
+  .btn { border: 0; border-radius: 20px; padding: 20px 36px; font: inherit; font-size: 26px; font-weight: 800; background: #1E293B; color: #fff; min-width: 280px; }
+  .btn.sec { background: #FEF9C3; color: #1E293B; font-size: 20px; padding: 14px 28px; }
+  .steps { font-size: 21px; font-weight: 700; line-height: 1.7; background: rgba(255,255,255,.55); border-radius: 18px; padding: 14px 22px; text-align: left; max-width: 560px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <img src="icon-512.png" alt="">
+  <h1>QC Station</h1>
+  <div class="dev" id="dev"></div>
+  <div id="go">กำลังเปิดระบบ…</div>
+  <div id="setup" hidden>
+    <button type="button" class="btn" id="btnInstall" hidden>📲 ติดตั้งไอคอนบนหน้าจอ</button>
+    <div class="steps" id="manual" hidden>1. กด ⋮ มุมขวาบนของ Chrome<br>2. เลือก <b>"ติดตั้งแอป"</b> (หรือ "เพิ่มลงในหน้าจอหลัก")<br>3. กด <b>"ติดตั้ง"</b> — ไอคอนกล้องจุลทรรศน์จะขึ้นบนหน้าจอ</div>
+    <div class="steps" id="done" hidden>✅ ติดตั้งแล้ว — ปิดหน้านี้ แล้วกดไอคอน <b>QC Station</b> บนหน้าจอ</div>
+    <p><button type="button" class="btn sec" id="btnOpen">เปิดระบบเลย</button></p>
+  </div>
+</main>
+<script>
+  // Production Apps Script deployment (/exec) — the link users actually work in. Change here if the deployment id changes.
+  const EXEC = 'https://script.google.com/macros/s/AKfycbxiJj7K6W_UPcTbbIf6G4bAF4kLJYcmc89jtr9sDGT0GzT2_drZih34u-enrxReUCJzaQ/exec';
+  const q = new URLSearchParams(location.search);
+  try { if (q.get('device')) localStorage.setItem('STQV_DEVICE', q.get('device').toUpperCase()); } catch (e) {}
+  let dev = ''; try { dev = localStorage.getItem('STQV_DEVICE') || ''; } catch (e) {}
+  const target = EXEC + (dev ? '?device=' + encodeURIComponent(dev) : '');
+  const $ = id => document.getElementById(id);
+  $('dev').textContent = dev ? 'เครื่อง ' + dev : 'เลือกเครื่องในระบบหลังเปิด';
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+  $('btnOpen').onclick = () => location.replace(target);
+  if (standalone || !q.has('install')) {
+    location.replace(target);                     // launched from the icon (or plain visit) → straight to Apps Script
+  } else {                                        // opened from the app's "ไอคอนหน้าจอ" button → install screen
+    $('go').hidden = true; $('setup').hidden = false; $('manual').hidden = false;
+    let deferred = null;
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; $('btnInstall').hidden = false; $('manual').hidden = true; });
+    $('btnInstall').onclick = async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice; deferred = null; $('btnInstall').hidden = true; };
+    window.addEventListener('appinstalled', () => { $('btnInstall').hidden = true; $('manual').hidden = true; $('done').hidden = false; });
+  }
+</script>
+</body>
+</html>
